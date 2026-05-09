@@ -4,47 +4,29 @@ Retrieval-Augmented Generation (RAG) pipeline that indexes the technical manual 
 
 ---
 
-## Architecture
+## Pipeline Demo
+Watch the 1-minute demonstration of the F-16 Technical Manual RAG Pipeline in action:
 
-```
-PDF
- |
- v
-[Docling Parser]
- |  Extracts: paragraphs, headings, tables (TableFormer ACCURATE), figures
- |  Output: output/{stem}_parsed.json
- v
-[Chunker]
- |  Strategy: sentence-boundary sliding window (spaCy + token counts)
- |  Overlap: configurable token overlap between adjacent chunks
- |  Output: data/chunks.json
- v
-[OllamaEmbedder]
- |  Model: nomic-embed-text (768-dim, 2048 token context)
- |  Batched HTTP POST to local Ollama instance
- v
-[Qdrant VectorStore]
- |  Cosine similarity, on-disk vectors, payload indexes
- |  Collection: Manual_Collection
- v
-                         ┌─────────────────────────────────┐
-                         │         Query Time               │
-                         │                                  │
-            User Query → [OllamaEmbedder] → [Qdrant Search]│
-                         │         │                        │
-                         │    top-k candidates              │
-                         │         │                        │
-                         │  [CrossEncoder Reranker]         │
-                         │   (gte-reranker-modernbert)      │
-                         │         │                        │
-                         │    top-2 chunks                  │
-                         │         │                        │
-                         │  [OllamaGenerator]               │
-                         │   (llama3.1:8b-instruct)         │
-                         │         │                        │
-                         └─────────┼────────────────────────┘
-                                   │
-                               Answer + Sources + Metrics
+<video src="img/pipeline_demo.mp4" width="100%" controls></video>
+
+*(If the video does not play, you can [download it here](img/pipeline_demo.mp4))*
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart TD
+    A[F-16 Manual PDF] --> B[Docling Parser]
+    B --> |Headings, Tables, Text| C[Intelligent Chunker - Structure aware - Sliding window]
+    C --> |Token-aware, Overlapping Chunks| D[Ollama Embedder]
+    D --> |Vectorization| E[(Qdrant Vector Store)]
+    
+    F[User Query] --> G[Ollama Embedder]
+    G --> |Query Vector| E
+    E --> |Top-K Candidates| H[Cross-Encoder Reranker]
+    H --> |Top-2 Best Chunks| I[LLM Generator]
+    I --> J[Grounded Answer + Citations]
 ```
 
 ---
@@ -187,20 +169,20 @@ RAG_Pipeline/
 
 ## Tech Stack
 
-| Component | Technology | Version |
-|---|---|---|
-| PDF Parsing | Docling | 2.31.0 |
-| OCR | EasyOCR | 1.7.2 |
-| Embedder | nomic-embed-text (via Ollama) | latest |
-| Vector Store | Qdrant | 1.13.3 |
-| Reranker | Alibaba-NLP/gte-reranker-modernbert-base | via HuggingFace |
-| Generator | llama3.1:8b-instruct-q4_K_S (via Ollama) | 8b |
-| Tokenizer | tiktoken cl100k_base | 0.9.0 |
-| Sentence Splitting | spaCy en_core_web_sm | 3.8.5 |
-| Evaluation | RAGAS | 0.2.15 |
-| Experiment Tracking | MLflow | 2.22.0 |
-| UI | Streamlit | 1.45.0 |
-| Charts | Plotly | 6.0.1 |
+| Component | Technology |
+|---|---|
+| PDF Parsing | Docling |
+| OCR | EasyOCR |
+| Embedder | nomic-embed-text (via Ollama) |
+| Vector Store | Qdrant |
+| Reranker | Alibaba-NLP/gte-reranker-modernbert-base |
+| Generator | llama3.1:8b-instruct-q4_K_S (via Ollama) |
+| Tokenizer | tiktoken cl100k_base |
+| Sentence Splitting | spaCy en_core_web_sm |
+| Evaluation | RAGAS |
+| Experiment Tracking | MLflow |
+| UI | Streamlit |
+| Charts | Plotly |
 
 ---
 
@@ -243,14 +225,10 @@ python -m eval.llm_as_judge --dataset dataset/eval_dataset.csv --output dataset/
 # View MLflow Runs in browser (Parsing - Indexing - Chunking - Evaluation)
 mlflow ui --port 5000
 # Open: http://localhost:5000
+```
 
-# Pipeline Visualization
+### Pipeline Tracking (MLflow)
 ![MLFlow evaluation snippet](img/MLflow_run.png)
-
-## Pipeline Demo
-Watch the 1-minute demonstration of the F-16 Technical Manual RAG Pipeline:
-
-<video src="img/pipeline_demo.mp4" width="100%" controls></video>
 
 ---
 
