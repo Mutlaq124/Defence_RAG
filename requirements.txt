@@ -1,0 +1,88 @@
+# =============================================================================
+# The torch version MUST match your CUDA driver. Docling will pull torch as a
+# dependency otherwise and may get the wrong CUDA build.
+#
+# CUDA 12.x (RTX series, most modern GPUs):
+#   pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 \
+#       --index-url https://download.pytorch.org/whl/cu124
+#
+# CPU-only (no GPU, slower reranker):
+#   pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 \
+#       --index-url https://download.pytorch.org/whl/cpu
+#
+# Then install everything else:
+#   pip install -r requirements.txt
+# =============================================================================
+
+# --- Document Parsing (Docling) ---
+# Docling internal API (texts/tables/pictures keys) changed in 2.x.
+# Do NOT upgrade without re-testing parser_docling.py extraction logic.
+docling==2.31.0 # 2.63.0 check 
+docling-core==2.27.0 #2.53.0
+docling-parse==4.0.0 #4.7.1 
+
+# EasyOCR backend — for scanned/image PDFs (used in PdfPipelineOptions)
+easyocr==1.7.2
+
+# --- Vector Database ---
+# qdrant-client 1.9+ uses query_points() (new API); older versions use search().
+# Our qdrant_store.py uses query_points — do NOT downgrade below 1.9.
+qdrant-client==1.13.3 # 1.16.1 check
+
+# --- Embeddings & Reranker (HuggingFace) ---
+# transformers + sentence-transformers: used by CrossEncoderReranker (BAAI/bge-reranker-v2-m3)
+transformers==4.51.3
+sentence-transformers==4.1.0
+
+# accelerate: required by transformers for device_map / quantization support
+accelerate==1.6.0
+
+# --- LLM Serving (Ollama) ---
+# ollama Python SDK — used in llm_as_judge.py (Client().generate())
+ollama==0.4.8
+
+# --- Tokenization ---
+# tiktoken: used for token counting in chunker (cl100k_base encoding)
+# Must stay compatible with the openai tokenizer API (encode/decode)
+tiktoken==0.9.0
+
+# --- NLP (Sentence Splitting) ---
+# spacy: used in utils.py split_into_sentences() with en_core_web_sm
+# After install: python -m spacy download en_core_web_sm
+spacy==3.8.5
+
+# regex: drop-in re replacement with more Unicode/lookaround support
+# Used in utils.py sentence splitting fallback
+regex==2024.11.6
+
+# --- Experiment Tracking ---
+# mlflow: used by mlflow_tracker.py for run/param/metric/artifact logging
+# Local tracking URI (./mlruns) — no server needed for local use
+mlflow==2.22.0
+
+# --- Evaluation (RAGAS) ---
+# ragas: context_precision, faithfulness, answer_relevancy etc.
+# datasets: HuggingFace Dataset wrapper required by ragas evaluate()
+ragas==0.2.15
+datasets==3.5.1
+langchain_ollama
+
+# --- Web UI ---
+# streamlit: app.py interface — pin to avoid breaking API changes
+streamlit==1.45.0
+
+# plotly: interactive charts in Streamlit eval results tab
+plotly==6.0.1
+
+# --- Utilities ---
+# structlog: structured logging in utils.py (JSON or console renderer)
+structlog==25.3.0
+
+# python-dotenv: loads .env into os.environ at startup
+python-dotenv==1.1.0
+
+# requests: HTTP client for Ollama REST API + dependency health checks
+requests==2.32.3
+
+# pydantic: config validation (used indirectly by mlflow, ragas, docling)
+pydantic==2.11.4

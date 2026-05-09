@@ -1,0 +1,44 @@
+# Secrets and local config
+.env
+
+# Large binary data (PDFs)
+data/*.pdf
+data/chunks.json
+
+# Generated outputs (reproducible from pipeline)
+output/
+dataset/
+
+# MLflow experiment tracking
+mlruns/
+
+# HuggingFace model weights (gigabytes)
+models_cache/
+
+# Qdrant local vector storage
+qdrant_storage/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
