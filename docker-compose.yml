@@ -1,0 +1,122 @@
+version: '3.8'
+
+# ==========================================
+# Networks
+# ==========================================
+networks:
+  rag-network:
+    driver: bridge
+
+# ==========================================
+# Volumes
+# ==========================================
+volumes:
+  qdrant-data:
+    driver: local
+  ollama-models:
+    driver: local
+
+# ==========================================
+# Services
+# ==========================================
+services:
+  
+  # Qdrant Vector DB
+  qdrant:
+    image: qdrant/qdrant:v1.11.0
+    container_name: qdrant-db
+    networks:
+      - rag-network
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"
+      - "${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+  
+  # Qdrant UI
+  qdrant-ui:
+    image: qdrant/qdrant-ui:latest
+    container_name: qdrant-ui
+    networks:
+      - rag-network
+    ports:
+      - "${QDRANT_UI_PORT:-8080}:8080"
+    environment:
+      QDRANT_URL: http://qdrant:6333
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+  
+  # Ollama (LLM Server)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-server
+    networks:
+      - rag-network
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+  
+  # RAG Application
+  rag-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag-pipeline
+    networks:
+      - rag-network
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      qdrant:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
